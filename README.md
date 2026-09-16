@@ -28,7 +28,6 @@ flowchart LR
     Public -.->|redirect for\nDrive-linked docs| Drive[Google Drive]
 ```
 
-<<<<<<< HEAD
 - `Auth` gates every route with one shared password (no per-user accounts).
 - `Docs` handles both storage paths: uploaded PDFs are saved to local
   disk, pasted Drive links are stored as a URL and redirected to on open.
@@ -40,4 +39,3 @@ flowchart LR
   or paste Drive links.
 - Each hub page is `templates/hub.html` filled with that project's data —
   the same design as the original `ProjectHub.html` reference.
->>>>>>> 0383eaf (Turn ProjectHub into a multi-project template generator)
