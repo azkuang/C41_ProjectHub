@@ -16,7 +16,7 @@
       <span class="link-index">{{ "%02d"|format(loop.index) }}</span>
       <a class="link-content" href="{{ url_for('admin.project_detail', project_id=project['id']) }}">
         <strong>{{ project['title'] }}</strong>
-        <span>{{ project['eyebrow'] }} &middot; /p/{{ project['slug'] }}</span>
+        <span>{{ project['eyebrow'] }} &middot; {{ project['slug'] }}</span>
       </a>
       <a class="link-button" href="{{ url_for('projects.hub', slug=project['slug']) }}" target="_blank" rel="noopener">View public page</a>
       <a class="link-button" href="{{ url_for('admin.edit_project', project_id=project['id']) }}">Edit</a>
