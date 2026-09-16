@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Projects — C41 ProjectHub{% endblock %}
+{% block content %}
+<div class="intro">
+  <div>
+    <p class="eyebrow">C41 ProjectHub</p>
+    <h1>Projects<span>.</span></h1>
+  </div>
+</div>
+
+<div class="documents">
+  {% if projects %}
+    {% for project in projects %}
+    <a class="wide-link" href="{{ url_for('projects.hub', slug=project['slug']) }}">
+      <span class="link-index">{{ "%02d"|format(loop.index) }}</span>
+      <span class="link-content">
+        <strong>{{ project['title'] }}</strong>
+        <span>{{ project['eyebrow'] }}{% if project['date_range_text'] %} &middot; {{ project['date_range_text'] }}{% endif %}</span>
+      </span>
+      <span class="arrow" aria-hidden="true">↗</span>
+    </a>
+    {% endfor %}
+  {% else %}
+    <p class="empty-state">No projects yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

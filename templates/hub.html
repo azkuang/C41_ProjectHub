@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="{{ project['title'] }} production: callsheets, contacts, creative materials and documents.">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Project Hub — {{ project['title'] }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='hub.css') }}">
+</head>
+<body>
+<a class="skip" href="#documents">Skip to project documents</a>
+<main class="shell">
+<header class="masthead">
+  <img class="brand-c41" src="{{ url_for('static', filename='c41.png') }}" alt="C41" width="90" height="39">
+  {% if project['client_logo_filename'] %}
+  <span class="brand-divider" aria-hidden="true"></span>
+  <img class="brand-client" src="{{ url_for('static', filename='logos/' ~ project['client_logo_filename']) }}" alt="{{ project['title'] }}">
+  {% endif %}
+  {% if project['production_label'] %}
+  <span class="production-label">{{ project['production_label'] }}</span>
+  {% endif %}
+</header>
+
+<section class="intro" aria-labelledby="page-title">
+  <div>
+    <p class="eyebrow">{{ project['eyebrow'] }}</p>
+    <h1 id="page-title">Project Hub<span aria-hidden="true">.</span></h1>
+  </div>
+  {% if project['date_range_text'] or project['date_year'] %}
+  <div class="project-date">
+    {% if project['date_range_text'] %}<span>{{ project['date_range_text'] }}</span>{% endif %}
+    {% if project['date_year'] %}<span class="year">{{ project['date_year'] }}</span>{% endif %}
+  </div>
+  {% endif %}
+</section>
+
+{% if credits %}
+<section class="project-credits" aria-label="Creative team"><dl>
+  {% for credit in credits %}
+  <div><dt>{{ credit['role'] }}</dt><dd>{{ credit['name']|upper }}</dd></div>
+  {% endfor %}
+</dl></section>
+{% endif %}
+
+<div class="workspace" id="documents">
+<section class="documents" aria-label="Project documents">
+  {% for doc in documents %}
+  <a class="wide-link document-link" href="{{ url_for('projects.open_document', slug=project['slug'], doc_id=doc['id']) }}" target="_blank" rel="noopener">
+    <span class="link-index">{{ "%02d"|format(loop.index) }}</span>
+    <span class="link-content">
+      <strong>{{ doc['title'] }}</strong>
+      <span>{{ doc['subtitle'] or ('View PDF' if doc['source_type'] == 'upload' else 'Open link') }}</span>
+    </span>
+    <span class="arrow" aria-hidden="true">↗</span>
+  </a>
+  {% endfor %}
+  {% if not documents and not callsheets and not menus %}
+  <p class="empty-state">No documents yet.</p>
+  {% endif %}
+
+  {% if callsheets %}
+  <section class="callsheets" aria-labelledby="callsheets-title">
+    <div class="section-heading">
+      <h2 id="callsheets-title">Callsheet</h2>
+    </div>
+    <div class="day-grid">
+      {% for day in callsheets %}
+      <a class="day" href="{{ url_for('projects.open_document', slug=project['slug'], doc_id=day['id']) }}" target="_blank" rel="noopener" aria-label="{{ day['day_label'] }}, {{ day['display_date'] }} — {{ day['location'] }}">
+        <span class="day-name">{{ day['day_label'] }}</span>
+        <time datetime="{{ day['entry_date'] }}">{{ day['display_date'] }}</time>
+        <span class="day-location">{{ day['location'] }}</span>
+        <span class="day-bottom">{{ day['weekday'] }} <span aria-hidden="true">↗</span></span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if menus %}
+  <section class="menus" aria-labelledby="menus-title">
+    <div class="section-heading">
+      <h2 id="menus-title">On-Set Catering</h2>
+    </div>
+    <div class="menu-buttons">
+      {% for menu in menus %}
+      <a class="menu-button" href="{{ url_for('projects.open_document', slug=project['slug'], doc_id=menu['id']) }}" target="_blank" rel="noopener" aria-label="{{ menu['title'] }}, {{ menu['display_date'] }}">
+        <time datetime="{{ menu['entry_date'] }}">{{ menu['display_date'] }}</time>
+        <span aria-hidden="true">↗</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</section>
+
+<aside class="support" aria-label="Production support">
+  {% if project['coordinator_name'] %}
+  <a class="coordinator" href="tel:{{ project['coordinator_phone'] }}" aria-label="Call the Coordinator, {{ project['coordinator_name'] }}, {{ project['coordinator_phone'] }}">
+    <span class="card-label">PRODUCTION SUPPORT</span>
+    <span class="phone-icon" aria-hidden="true">↗</span>
+    <strong>Call the <br>Coordinator</strong>
+    <span class="person">{{ project['coordinator_name'] }}</span>
+    <span class="phone-number">{{ project['coordinator_phone'] }}</span>
+  </a>
+  {% endif %}
+  <a class="emergency" href="tel:{{ project['emergency_phone'] }}" aria-label="Emergency — call {{ project['emergency_phone'] }}">
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 3 2 21h20L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M12 9v5m0 3v1" stroke="currentColor" stroke-width="1.8"></path></svg>
+    <span><strong>Emergency</strong><span>Call {{ project['emergency_phone'] }}</span></span>
+    <span class="arrow" aria-hidden="true">↗</span>
+  </a>
+  <details class="installation">
+    <summary>Add to Home Screen <span aria-hidden="true">+</span></summary>
+    <div class="install-content">
+      <p class="install-intro">Open this page in your phone's browser first.</p>
+      <h3>iPhone</h3>
+      <ol><li>Open in Safari.</li><li>Tap Share, then <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>.</li></ol>
+      <h3>Android</h3>
+      <ol><li>Open in Chrome.</li><li>Tap the &#8942; menu, then <b>Add to home screen</b> &rarr; <b>Install</b>.</li></ol>
+    </div>
+  </details>
+</aside>
+</div>
+<footer><span class="footer-project">C41 / {{ project['title']|upper }}</span></footer>
+</main>
+</body>
+</html>

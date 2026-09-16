@@ -17,11 +17,13 @@ def create_app():
 
     app.teardown_appcontext(close_db)
 
+    import admin
     import auth
-    import documents
+    import projects
 
     app.register_blueprint(auth.bp)
-    app.register_blueprint(documents.bp)
+    app.register_blueprint(projects.bp)
+    app.register_blueprint(admin.bp, url_prefix="/admin")
 
     return app
 

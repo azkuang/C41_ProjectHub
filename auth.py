@@ -33,7 +33,7 @@ def login():
             session.clear()
             session["authenticated"] = True
             session.permanent = True
-            next_url = request.form.get("next") or url_for("documents.index")
+            next_url = request.form.get("next") or url_for("admin.dashboard")
             return redirect(next_url)
         flash("Incorrect password.")
     return render_template("login.html")

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Admin — C41 ProjectHub{% endblock %}
+{% block content %}
+<div class="intro">
+  <div>
+    <p class="eyebrow">Admin</p>
+    <h1>Projects<span>.</span></h1>
+  </div>
+  <a class="button-secondary" href="{{ url_for('admin.new_project') }}">New project</a>
+</div>
+
+<div class="documents">
+  {% if projects %}
+    {% for project in projects %}
+    <div class="wide-link">
+      <span class="link-index">{{ "%02d"|format(loop.index) }}</span>
+      <a class="link-content" href="{{ url_for('admin.project_detail', project_id=project['id']) }}">
+        <strong>{{ project['title'] }}</strong>
+        <span>{{ project['eyebrow'] }} &middot; /p/{{ project['slug'] }}</span>
+      </a>
+      <a class="link-button" href="{{ url_for('projects.hub', slug=project['slug']) }}" target="_blank" rel="noopener">View public page</a>
+      <a class="link-button" href="{{ url_for('admin.edit_project', project_id=project['id']) }}">Edit</a>
+      <form method="post" action="{{ url_for('admin.delete_project', project_id=project['id']) }}" onsubmit="return confirm('Delete this project and all its documents?');">
+        <button type="submit" class="delete-button" aria-label="Delete">&times;</button>
+      </form>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="empty-state">No projects yet. Create one above.</p>
+  {% endif %}
+</div>
+{% endblock %}

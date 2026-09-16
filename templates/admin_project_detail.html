@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ project['title'] }} — C41 ProjectHub{% endblock %}
+{% block content %}
+<div class="intro">
+  <div>
+    <p class="eyebrow">{{ project['eyebrow'] }}</p>
+    <h1>{{ project['title'] }}<span>.</span></h1>
+  </div>
+  <div>
+    <a class="button-secondary" href="{{ url_for('admin.edit_project', project_id=project['id']) }}">Edit project</a>
+    <a class="button-secondary" href="{{ url_for('projects.hub', slug=project['slug']) }}" target="_blank" rel="noopener">View public page ↗</a>
+  </div>
+</div>
+
+<section>
+  <p class="card-label">Credits</p>
+  <div class="documents">
+    {% for credit in credits %}
+    <div class="wide-link">
+      <span class="link-content">
+        <strong>{{ credit['name'] }}</strong>
+        <span>{{ credit['role'] }}</span>
+      </span>
+      <form method="post" action="{{ url_for('admin.delete_credit', credit_id=credit['id']) }}" onsubmit="return confirm('Remove this credit?');">
+        <button type="submit" class="delete-button" aria-label="Remove">&times;</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="empty-state">No credits yet.</p>
+    {% endfor %}
+  </div>
+  <form method="post" action="{{ url_for('admin.add_credit', project_id=project['id']) }}" class="card">
+    <label for="credit-role">Role</label>
+    <input type="text" id="credit-role" name="role" placeholder="creative director" required>
+    <label for="credit-name">Name</label>
+    <input type="text" id="credit-name" name="name" required>
+    <button type="submit">Add credit</button>
+  </form>
+</section>
+
+{% for section, label in [('document', 'Documents & Links'), ('callsheet', 'Callsheets'), ('menu', 'Catering Menus')] %}
+<section>
+  <p class="card-label">{{ label }}</p>
+  <div class="documents">
+    {% for doc in documents_by_section[section] %}
+    <div class="wide-link document-link">
+      <span class="link-content">
+        <strong>{{ doc['title'] }}</strong>
+        <span>
+          {{ doc['uploader_name'] }} &middot;
+          {{ 'Google Drive' if doc['source_type'] == 'drive' else 'Uploaded PDF' }}
+          {%- if doc['entry_date'] %} &middot; {{ doc['entry_date'] }}{% endif %}
+          {%- if doc['location'] %} &middot; {{ doc['location'] }}{% endif %}
+        </span>
+      </span>
+      <form method="post" action="{{ url_for('admin.delete_document', doc_id=doc['id']) }}" onsubmit="return confirm('Delete this entry?');">
+        <button type="submit" class="delete-button" aria-label="Delete">&times;</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="empty-state">Nothing here yet.</p>
+    {% endfor %}
+  </div>
+
+  <div class="add-panel">
+    <form method="post" action="{{ url_for('admin.upload_document', project_id=project['id'], section=section) }}" enctype="multipart/form-data" class="card drop-zone">
+      <p class="card-label">Drop a PDF from your computer</p>
+      <input type="file" class="file-input" name="file" accept="application/pdf" hidden required>
+      <p class="drop-hint">Drag a PDF here, or <button type="button" class="link-button browse-button">browse</button></p>
+      <p class="drop-filename"></p>
+      <label>Title</label>
+      <input type="text" name="title" required>
+      {% if section == 'callsheet' %}
+      <label>Date</label>
+      <input type="date" name="entry_date" required>
+      <label>Location</label>
+      <input type="text" name="location" required>
+      {% elif section == 'menu' %}
+      <label>Date</label>
+      <input type="date" name="entry_date" required>
+      {% elif section == 'document' %}
+      <label>Subtitle (optional)</label>
+      <input type="text" name="subtitle">
+      {% endif %}
+      <label>Your name</label>
+      <input type="text" name="uploader_name" required>
+      <button type="submit">Add PDF</button>
+    </form>
+
+    <form method="post" action="{{ url_for('admin.add_document_link', project_id=project['id'], section=section) }}" class="card creative">
+      <p class="card-label">Paste a link</p>
+      <label>URL</label>
+      <input type="url" name="drive_url" placeholder="https://drive.google.com/..." required>
+      <label>Title</label>
+      <input type="text" name="title" required>
+      {% if section == 'callsheet' %}
+      <label>Date</label>
+      <input type="date" name="entry_date" required>
+      <label>Location</label>
+      <input type="text" name="location" required>
+      {% elif section == 'menu' %}
+      <label>Date</label>
+      <input type="date" name="entry_date" required>
+      {% elif section == 'document' %}
+      <label>Subtitle (optional)</label>
+      <input type="text" name="subtitle">
+      {% endif %}
+      <label>Your name</label>
+      <input type="text" name="uploader_name" required>
+      <button type="submit">Add link</button>
+    </form>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

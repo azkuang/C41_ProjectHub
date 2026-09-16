@@ -36,15 +36,46 @@ def login(client):
     return client.post("/login", data={"password": "testpass"}, follow_redirects=True)
 
 
-def test_index_requires_login(client):
-    resp = client.get("/", follow_redirects=True)
+def create_project(client, title="Zegna SS27", eyebrow="ZEGNA SS27"):
+    resp = client.post(
+        "/admin/projects/new",
+        data={
+            "title": title,
+            "eyebrow": eyebrow,
+            "production_label": "PRODUCTION / SS27",
+            "date_range_text": "17 — 19 SEPTEMBER",
+            "date_year": "2026",
+            "coordinator_name": "Micol Lupi",
+            "coordinator_phone": "+393401458343",
+            "emergency_phone": "112",
+        },
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+    with client.application.app_context():
+        from db import get_db
+
+        row = get_db().execute(
+            "SELECT id, slug FROM projects WHERE title = ?", (title,)
+        ).fetchone()
+    return row["id"], row["slug"]
+
+
+def test_landing_is_public(client):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert b"Sign in" not in resp.data
+
+
+def test_admin_requires_login(client):
+    resp = client.get("/admin/", follow_redirects=True)
     assert b"Sign in" in resp.data
 
 
 def test_login_success(client):
     resp = login(client)
     assert resp.status_code == 200
-    assert b"Documents" in resp.data
+    assert b"Projects" in resp.data
 
 
 def test_login_failure(client):
@@ -52,36 +83,114 @@ def test_login_failure(client):
     assert b"Incorrect password" in resp.data
 
 
-def test_upload_round_trip(client):
+def test_create_project_and_public_hub(client):
     login(client)
+    project_id, slug = create_project(client)
+
+    landing_resp = client.get("/")
+    assert b"Zegna SS27" in landing_resp.data
+
+    hub_resp = client.get(f"/p/{slug}")
+    assert hub_resp.status_code == 200
+    assert b"ZEGNA SS27" in hub_resp.data
+    assert b"Sign in" not in hub_resp.data
+
+
+def test_unknown_slug_404s(client):
+    resp = client.get("/p/does-not-exist")
+    assert resp.status_code == 404
+
+
+def test_add_credit_appears_on_hub(client):
+    login(client)
+    project_id, slug = create_project(client)
+    client.post(
+        f"/admin/projects/{project_id}/credits",
+        data={"role": "creative director", "name": "Alessandro Sartori"},
+        follow_redirects=True,
+    )
+    resp = client.get(f"/p/{slug}")
+    assert b"ALESSANDRO SARTORI" in resp.data
+    assert b"creative director" in resp.data
+
+
+def test_upload_document_round_trip(client):
+    login(client)
+    project_id, slug = create_project(client)
     data = {
-        "title": "Test PDF",
+        "title": "ADV Shotlist",
         "uploader_name": "Alex",
         "file": (io.BytesIO(b"%PDF-1.4 fake pdf content"), "test.pdf"),
     }
     resp = client.post(
-        "/upload", data=data, content_type="multipart/form-data", follow_redirects=True
+        f"/admin/projects/{project_id}/documents/document/upload",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
     )
-    assert b"Test PDF" in resp.data
+    assert b"ADV Shotlist" in resp.data
+
+    hub_resp = client.get(f"/p/{slug}")
+    assert b"ADV Shotlist" in hub_resp.data
+
+    with client.application.app_context():
+        from db import get_db
+
+        doc = get_db().execute(
+            "SELECT id FROM documents WHERE title = ?", ("ADV Shotlist",)
+        ).fetchone()
+
+    open_resp = client.get(f"/p/{slug}/documents/{doc['id']}/open")
+    assert open_resp.status_code == 200
+    assert open_resp.data.startswith(b"%PDF-")
+
+
+def test_open_document_wrong_project_404s(client):
+    login(client)
+    _, slug_a = create_project(client, title="Project A", eyebrow="A")
+    project_b, _ = create_project(client, title="Project B", eyebrow="B")
+    client.post(
+        f"/admin/projects/{project_b}/documents/document/link",
+        data={
+            "title": "Other project doc",
+            "uploader_name": "Alex",
+            "drive_url": "https://drive.google.com/file/d/xyz/view",
+        },
+        follow_redirects=True,
+    )
+    with client.application.app_context():
+        from db import get_db
+
+        doc = get_db().execute(
+            "SELECT id FROM documents WHERE title = ?", ("Other project doc",)
+        ).fetchone()
+
+    resp = client.get(f"/p/{slug_a}/documents/{doc['id']}/open")
+    assert resp.status_code == 404
 
 
 def test_reject_non_pdf(client):
     login(client)
+    project_id, _ = create_project(client)
     data = {
         "title": "Bad File",
         "uploader_name": "Alex",
         "file": (io.BytesIO(b"not a pdf"), "test.txt"),
     }
     resp = client.post(
-        "/upload", data=data, content_type="multipart/form-data", follow_redirects=True
+        f"/admin/projects/{project_id}/documents/document/upload",
+        data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
     )
     assert b"Only PDF files are allowed" in resp.data
 
 
 def test_add_link_round_trip(client):
     login(client)
+    project_id, slug = create_project(client)
     resp = client.post(
-        "/add-link",
+        f"/admin/projects/{project_id}/documents/document/link",
         data={
             "title": "Shotlist",
             "uploader_name": "Alex",
@@ -90,3 +199,144 @@ def test_add_link_round_trip(client):
         follow_redirects=True,
     )
     assert b"Shotlist" in resp.data
+    hub_resp = client.get(f"/p/{slug}")
+    assert b"Shotlist" in hub_resp.data
+
+
+def test_callsheet_requires_date_and_location(client):
+    login(client)
+    project_id, slug = create_project(client)
+    resp = client.post(
+        f"/admin/projects/{project_id}/documents/callsheet/link",
+        data={
+            "title": "Day 1",
+            "uploader_name": "Alex",
+            "drive_url": "https://drive.google.com/file/d/abc123/view",
+        },
+        follow_redirects=True,
+    )
+    assert b"A date is required" in resp.data
+
+    resp = client.post(
+        f"/admin/projects/{project_id}/documents/callsheet/link",
+        data={
+            "title": "Day 1",
+            "uploader_name": "Alex",
+            "drive_url": "https://drive.google.com/file/d/abc123/view",
+            "entry_date": "2026-09-17",
+        },
+        follow_redirects=True,
+    )
+    assert b"A location is required" in resp.data
+
+    client.post(
+        f"/admin/projects/{project_id}/documents/callsheet/link",
+        data={
+            "title": "Day 1",
+            "uploader_name": "Alex",
+            "drive_url": "https://drive.google.com/file/d/abc123/view",
+            "entry_date": "2026-09-17",
+            "location": "CA GIANIN",
+        },
+        follow_redirects=True,
+    )
+    hub_resp = client.get(f"/p/{slug}")
+    assert b"DAY01" in hub_resp.data
+    assert b"CA GIANIN" in hub_resp.data
+    assert b"THURSDAY" in hub_resp.data
+
+
+def test_menu_appears_on_hub(client):
+    login(client)
+    project_id, slug = create_project(client)
+    client.post(
+        f"/admin/projects/{project_id}/documents/menu/link",
+        data={
+            "title": "Brand Ambassador Lunch",
+            "uploader_name": "Alex",
+            "drive_url": "https://drive.google.com/file/d/abc123/view",
+            "entry_date": "2026-09-17",
+        },
+        follow_redirects=True,
+    )
+    hub_resp = client.get(f"/p/{slug}")
+    assert b"17 SEP" in hub_resp.data
+
+
+def test_delete_document_removes_file(client):
+    login(client)
+    project_id, slug = create_project(client)
+    client.post(
+        f"/admin/projects/{project_id}/documents/document/upload",
+        data={
+            "title": "ADV Shotlist",
+            "uploader_name": "Alex",
+            "file": (io.BytesIO(b"%PDF-1.4 fake pdf content"), "test.pdf"),
+        },
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    with client.application.app_context():
+        from db import get_db
+
+        doc = get_db().execute(
+            "SELECT id, filename FROM documents WHERE title = ?", ("ADV Shotlist",)
+        ).fetchone()
+        upload_path = os.path.join(
+            client.application.config["UPLOAD_FOLDER"], str(project_id), doc["filename"]
+        )
+        assert os.path.exists(upload_path)
+
+    client.post(
+        f"/admin/documents/{doc['id']}/delete", follow_redirects=True
+    )
+    assert not os.path.exists(upload_path)
+    hub_resp = client.get(f"/p/{slug}")
+    assert b"ADV Shotlist" not in hub_resp.data
+
+
+def test_delete_project_cascades(client):
+    login(client)
+    project_id, slug = create_project(client)
+    client.post(
+        f"/admin/projects/{project_id}/credits",
+        data={"role": "director", "name": "Someone"},
+        follow_redirects=True,
+    )
+    client.post(
+        f"/admin/projects/{project_id}/documents/document/upload",
+        data={
+            "title": "ADV Shotlist",
+            "uploader_name": "Alex",
+            "file": (io.BytesIO(b"%PDF-1.4 fake pdf content"), "test.pdf"),
+        },
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    upload_dir = os.path.join(client.application.config["UPLOAD_FOLDER"], str(project_id))
+    assert os.path.isdir(upload_dir)
+
+    client.post(f"/admin/projects/{project_id}/delete", follow_redirects=True)
+
+    assert not os.path.isdir(upload_dir)
+    assert client.get(f"/p/{slug}").status_code == 404
+
+    with client.application.app_context():
+        from db import get_db
+
+        db = get_db()
+        assert db.execute(
+            "SELECT COUNT(*) AS n FROM credits WHERE project_id = ?", (project_id,)
+        ).fetchone()["n"] == 0
+        assert db.execute(
+            "SELECT COUNT(*) AS n FROM documents WHERE project_id = ?", (project_id,)
+        ).fetchone()["n"] == 0
+
+
+def test_unauthenticated_admin_post_redirects_to_login(client):
+    project_id, _ = 1, "whatever"
+    resp = client.post(
+        f"/admin/projects/{project_id}/delete", follow_redirects=False
+    )
+    assert resp.status_code == 302
+    assert "/login" in resp.headers["Location"]
