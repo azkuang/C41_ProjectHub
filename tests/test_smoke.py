@@ -351,3 +351,122 @@ def test_unauthenticated_admin_post_redirects_to_login(client):
     )
     assert resp.status_code == 302
     assert "/login" in resp.headers["Location"]
+
+
+def test_reorder_credits(client):
+    login(client)
+    project_id, slug = create_project(client)
+    client.post(
+        f"/admin/projects/{project_id}/credits",
+        data={"role": "director", "name": "A"},
+        follow_redirects=True,
+    )
+    client.post(
+        f"/admin/projects/{project_id}/credits",
+        data={"role": "dop", "name": "B"},
+        follow_redirects=True,
+    )
+
+    with client.application.app_context():
+        from db import get_db
+
+        rows = get_db().execute(
+            "SELECT id, name FROM credits WHERE project_id = ? ORDER BY sort_order",
+            (project_id,),
+        ).fetchall()
+    assert [r["name"] for r in rows] == ["A", "B"]
+    ids = [r["id"] for r in rows]
+
+    resp = client.post(
+        f"/admin/projects/{project_id}/credits/reorder",
+        json={"order": list(reversed(ids))},
+    )
+    assert resp.status_code == 200
+
+    with client.application.app_context():
+        from db import get_db
+
+        rows = get_db().execute(
+            "SELECT name FROM credits WHERE project_id = ? ORDER BY sort_order",
+            (project_id,),
+        ).fetchall()
+    assert [r["name"] for r in rows] == ["B", "A"]
+
+    hub_resp = client.get(f"/p/{slug}")
+    b_index = hub_resp.data.index(b"B</dd>")
+    a_index = hub_resp.data.index(b"A</dd>")
+    assert b_index < a_index
+
+
+def test_reorder_documents_scoped_to_project_and_section(client):
+    login(client)
+    project_id, slug = create_project(client)
+    other_id, _ = create_project(client, title="Other Project", eyebrow="OTHER")
+
+    for title in ("Doc A", "Doc B"):
+        client.post(
+            f"/admin/projects/{project_id}/documents/document/link",
+            data={
+                "title": title,
+                "uploader_name": "Alex",
+                "drive_url": "https://drive.google.com/file/d/x/view",
+            },
+            follow_redirects=True,
+        )
+    client.post(
+        f"/admin/projects/{other_id}/documents/document/link",
+        data={
+            "title": "Other Doc",
+            "uploader_name": "Alex",
+            "drive_url": "https://drive.google.com/file/d/y/view",
+        },
+        follow_redirects=True,
+    )
+
+    with client.application.app_context():
+        from db import get_db
+
+        db = get_db()
+        rows = db.execute(
+            "SELECT id, title FROM documents WHERE project_id = ? AND section = 'document' "
+            "ORDER BY sort_order",
+            (project_id,),
+        ).fetchall()
+        other_doc = db.execute(
+            "SELECT id, sort_order FROM documents WHERE project_id = ?", (other_id,)
+        ).fetchone()
+    assert [r["title"] for r in rows] == ["Doc A", "Doc B"]
+    doc_a_id, doc_b_id = rows[0]["id"], rows[1]["id"]
+
+    # Include another project's document id in the payload — it must be ignored.
+    resp = client.post(
+        f"/admin/projects/{project_id}/documents/document/reorder",
+        json={"order": [doc_b_id, doc_a_id, other_doc["id"]]},
+    )
+    assert resp.status_code == 200
+
+    with client.application.app_context():
+        from db import get_db
+
+        db = get_db()
+        rows = db.execute(
+            "SELECT title FROM documents WHERE project_id = ? AND section = 'document' "
+            "ORDER BY sort_order",
+            (project_id,),
+        ).fetchall()
+        other_doc_after = db.execute(
+            "SELECT sort_order FROM documents WHERE id = ?", (other_doc["id"],)
+        ).fetchone()
+    assert [r["title"] for r in rows] == ["Doc B", "Doc A"]
+    assert other_doc_after["sort_order"] == other_doc["sort_order"]
+
+
+def test_reorder_requires_login(client):
+    project_id, _ = 1, "whatever"
+    resp = client.post(
+        f"/admin/projects/{project_id}/credits/reorder",
+        json={"order": []},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert "/login" in resp.headers["Location"]

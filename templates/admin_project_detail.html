@@ -14,9 +14,10 @@
 
 <section>
   <p class="card-label">Credits</p>
-  <div class="documents">
+  <div class="documents" data-reorder-url="{{ url_for('admin.reorder_credits', project_id=project['id']) }}">
     {% for credit in credits %}
-    <div class="wide-link">
+    <div class="wide-link reorder-item" draggable="true" data-id="{{ credit['id'] }}">
+      <span class="drag-handle" aria-hidden="true">⠿</span>
       <span class="link-content">
         <strong>{{ credit['name'] }}</strong>
         <span>{{ credit['role'] }}</span>
@@ -41,9 +42,10 @@
 {% for section, label in [('document', 'Documents & Links'), ('callsheet', 'Callsheets'), ('menu', 'Catering Menus')] %}
 <section>
   <p class="card-label">{{ label }}</p>
-  <div class="documents">
+  <div class="documents" data-reorder-url="{{ url_for('admin.reorder_documents', project_id=project['id'], section=section) }}">
     {% for doc in documents_by_section[section] %}
-    <div class="wide-link document-link">
+    <div class="wide-link document-link reorder-item" draggable="true" data-id="{{ doc['id'] }}">
+      <span class="drag-handle" aria-hidden="true">⠿</span>
       <span class="link-content">
         <strong>{{ doc['title'] }}</strong>
         <span>

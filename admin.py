@@ -254,6 +254,21 @@ def add_credit(project_id):
     return redirect(url_for("admin.project_detail", project_id=project_id))
 
 
+@bp.route("/projects/<int:project_id>/credits/reorder", methods=["POST"])
+@login_required
+def reorder_credits(project_id):
+    _get_project(project_id)
+    order = (request.get_json(silent=True) or {}).get("order", [])
+    db = get_db()
+    for index, credit_id in enumerate(order):
+        db.execute(
+            "UPDATE credits SET sort_order = ? WHERE id = ? AND project_id = ?",
+            (index, credit_id, project_id),
+        )
+    db.commit()
+    return {"status": "ok"}
+
+
 @bp.route("/credits/<int:credit_id>/delete", methods=["POST"])
 @login_required
 def delete_credit(credit_id):
@@ -400,6 +415,24 @@ def add_document_link(project_id, section):
     db.commit()
     flash("Link added.")
     return redirect(url_for("admin.project_detail", project_id=project_id))
+
+
+@bp.route(
+    "/projects/<int:project_id>/documents/<any(document,callsheet,menu):section>/reorder",
+    methods=["POST"],
+)
+@login_required
+def reorder_documents(project_id, section):
+    _get_project(project_id)
+    order = (request.get_json(silent=True) or {}).get("order", [])
+    db = get_db()
+    for index, doc_id in enumerate(order):
+        db.execute(
+            "UPDATE documents SET sort_order = ? WHERE id = ? AND project_id = ? AND section = ?",
+            (index, doc_id, project_id, section),
+        )
+    db.commit()
+    return {"status": "ok"}
 
 
 @bp.route("/documents/<int:doc_id>/delete", methods=["POST"])
