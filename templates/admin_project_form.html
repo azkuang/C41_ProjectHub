@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Edit project' if mode == 'edit' else 'New project' }} — C41 ProjectHub{% endblock %}
+{% block title %}New project — C41 ProjectHub{% endblock %}
 {% block content %}
 <div class="intro">
   <div>
-    <p class="eyebrow">{{ 'Edit project' if mode == 'edit' else 'New project' }}</p>
-    <h1>{{ (project['title'] if project and mode == 'edit' and project['title'] else 'Project details') }}<span>.</span></h1>
+    <p class="eyebrow">New project</p>
+    <h1>Project details<span>.</span></h1>
   </div>
 </div>
 
@@ -24,12 +24,6 @@
   <label for="date_year">Year</label>
   <input type="text" id="date_year" name="date_year" value="{{ project['date_year'] if project else '' }}" placeholder="2026">
 
-  {% if mode == 'edit' %}
-  <label for="slug">URL slug</label>
-  <input type="text" id="slug" name="slug" value="{{ project['slug'] if project else '' }}">
-  <p class="drop-hint">Changing this breaks any links already shared for this project.</p>
-  {% endif %}
-
   <label for="coordinator_name">Coordinator name</label>
   <input type="text" id="coordinator_name" name="coordinator_name" value="{{ project['coordinator_name'] if project else '' }}">
 
@@ -41,11 +35,8 @@
 
   <label for="client_logo">Client logo (optional)</label>
   <input type="file" id="client_logo" name="client_logo" accept="image/*">
-  {% if project and mode == 'edit' and project['client_logo_filename'] %}
-    <p class="drop-filename">Current: {{ project['client_logo_filename'] }}</p>
-  {% endif %}
 
-  <button type="submit">{{ 'Save changes' if mode == 'edit' else 'Create project' }}</button>
-  <a class="link-button" href="{{ url_for('admin.project_detail', project_id=project_id) if mode == 'edit' else url_for('admin.dashboard') }}">Cancel</a>
+  <button type="submit">Create project</button>
+  <a class="link-button" href="{{ url_for('admin.dashboard') }}">Cancel</a>
 </form>
 {% endblock %}

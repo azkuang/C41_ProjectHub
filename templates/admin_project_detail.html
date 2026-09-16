@@ -7,10 +7,49 @@
     <h1>{{ project['title'] }}<span>.</span></h1>
   </div>
   <div>
-    <a class="button-secondary" href="{{ url_for('admin.edit_project', project_id=project['id']) }}">Edit project</a>
     <a class="button-secondary" href="{{ url_for('projects.hub', slug=project['slug']) }}" target="_blank" rel="noopener">View public page ↗</a>
   </div>
 </div>
+
+<section>
+  <p class="card-label">Project details</p>
+  <form method="post" id="project-form" class="card" enctype="multipart/form-data"
+        action="{{ url_for('admin.edit_project', project_id=project['id']) }}">
+    <label for="title">Title</label>
+    <input type="text" id="title" name="title" value="{{ project['title'] }}" required>
+
+    <label for="eyebrow">Eyebrow (client / season)</label>
+    <input type="text" id="eyebrow" name="eyebrow" value="{{ project['eyebrow'] }}" placeholder="ZEGNA SS27" required>
+
+    <label for="production_label">Production label</label>
+    <input type="text" id="production_label" name="production_label" value="{{ project['production_label'] }}" placeholder="PRODUCTION / SS27">
+
+    <label for="date_range_text">Date range</label>
+    <input type="text" id="date_range_text" name="date_range_text" value="{{ project['date_range_text'] }}" placeholder="17 — 19 SEPTEMBER">
+
+    <label for="date_year">Year</label>
+    <input type="text" id="date_year" name="date_year" value="{{ project['date_year'] }}" placeholder="2026">
+
+    <label for="slug">URL slug</label>
+    <input type="text" id="slug" name="slug" value="{{ project['slug'] }}">
+    <p class="drop-hint">Changing this breaks any links already shared for this project.</p>
+
+    <label for="coordinator_name">Coordinator name</label>
+    <input type="text" id="coordinator_name" name="coordinator_name" value="{{ project['coordinator_name'] }}">
+
+    <label for="coordinator_phone">Coordinator phone</label>
+    <input type="text" id="coordinator_phone" name="coordinator_phone" value="{{ project['coordinator_phone'] }}" placeholder="+39 340 145 8343">
+
+    <label for="emergency_phone">Emergency phone</label>
+    <input type="text" id="emergency_phone" name="emergency_phone" value="{{ project['emergency_phone'] }}">
+
+    <label for="client_logo">Client logo (optional)</label>
+    <input type="file" id="client_logo" name="client_logo" accept="image/*">
+    {% if project['client_logo_filename'] %}
+      <p class="drop-filename">Current: {{ project['client_logo_filename'] }}</p>
+    {% endif %}
+  </form>
+</section>
 
 <section>
   <p class="card-label">Credits</p>
@@ -114,4 +153,8 @@
   </div>
 </section>
 {% endfor %}
+
+<section>
+  <button type="submit" form="project-form">Save changes</button>
+</section>
 {% endblock %}

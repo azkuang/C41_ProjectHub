@@ -105,7 +105,7 @@ def new_project():
         fields = _project_form_fields()
         if not fields["title"] or not fields["eyebrow"]:
             flash("Title and eyebrow are required.")
-            return render_template("admin_project_form.html", project=fields, mode="new")
+            return render_template("admin_project_form.html", project=fields)
 
         db = get_db()
         slug = unique_slug(db, slugify(fields["title"]))
@@ -133,7 +133,7 @@ def new_project():
         flash("Project created.")
         return redirect(url_for("admin.project_detail", project_id=cursor.lastrowid))
 
-    return render_template("admin_project_form.html", project=None, mode="new")
+    return render_template("admin_project_form.html", project=None)
 
 
 @bp.route("/projects/<int:project_id>/edit", methods=["GET", "POST"])
@@ -142,49 +142,49 @@ def edit_project(project_id):
     db = get_db()
     project = _get_project(project_id)
 
-    if request.method == "POST":
-        fields = _project_form_fields()
-        if not fields["title"] or not fields["eyebrow"]:
-            flash("Title and eyebrow are required.")
-            return render_template(
-                "admin_project_form.html", project=fields, mode="edit", project_id=project_id
-            )
-
-        requested_slug = request.form.get("slug", "").strip()
-        slug = unique_slug(
-            db, slugify(requested_slug or fields["title"]), exclude_id=project_id
-        )
-
-        logo_file = request.files.get("client_logo")
-        logo_filename = project["client_logo_filename"]
-        if logo_file and logo_file.filename:
-            new_logo = _save_logo(logo_file)
-            if new_logo:
-                if logo_filename:
-                    _remove_logo(logo_filename)
-                logo_filename = new_logo
-
-        db.execute(
-            "UPDATE projects SET slug=?, title=?, eyebrow=?, production_label=?, "
-            "date_range_text=?, date_year=?, client_logo_filename=?, coordinator_name=?, "
-            "coordinator_phone=?, emergency_phone=?, updated_at=datetime('now') WHERE id=?",
-            (
-                slug,
-                fields["title"],
-                fields["eyebrow"],
-                fields["production_label"],
-                fields["date_range_text"],
-                fields["date_year"],
-                logo_filename,
-                fields["coordinator_name"],
-                fields["coordinator_phone"],
-                fields["emergency_phone"],
-                project_id,
-            ),
-        )
-        db.commit()
-        flash("Project updated.")
+    if request.method == "GET":
         return redirect(url_for("admin.project_detail", project_id=project_id))
+
+    fields = _project_form_fields()
+    if not fields["title"] or not fields["eyebrow"]:
+        flash("Title and eyebrow are required.")
+        return redirect(url_for("admin.project_detail", project_id=project_id))
+
+    requested_slug = request.form.get("slug", "").strip()
+    slug = unique_slug(
+        db, slugify(requested_slug or fields["title"]), exclude_id=project_id
+    )
+
+    logo_file = request.files.get("client_logo")
+    logo_filename = project["client_logo_filename"]
+    if logo_file and logo_file.filename:
+        new_logo = _save_logo(logo_file)
+        if new_logo:
+            if logo_filename:
+                _remove_logo(logo_filename)
+            logo_filename = new_logo
+
+    db.execute(
+        "UPDATE projects SET slug=?, title=?, eyebrow=?, production_label=?, "
+        "date_range_text=?, date_year=?, client_logo_filename=?, coordinator_name=?, "
+        "coordinator_phone=?, emergency_phone=?, updated_at=datetime('now') WHERE id=?",
+        (
+            slug,
+            fields["title"],
+            fields["eyebrow"],
+            fields["production_label"],
+            fields["date_range_text"],
+            fields["date_year"],
+            logo_filename,
+            fields["coordinator_name"],
+            fields["coordinator_phone"],
+            fields["emergency_phone"],
+            project_id,
+        ),
+    )
+    db.commit()
+    flash("Project updated.")
+    return redirect(url_for("admin.project_detail", project_id=project_id))
 
     return render_template(
         "admin_project_form.html", project=project, mode="edit", project_id=project_id

@@ -19,7 +19,7 @@
         <span>{{ project['eyebrow'] }} &middot; {{ project['slug'] }}</span>
       </a>
       <a class="link-button" href="{{ url_for('projects.hub', slug=project['slug']) }}" target="_blank" rel="noopener">View public page</a>
-      <a class="link-button" href="{{ url_for('admin.edit_project', project_id=project['id']) }}">Edit</a>
+      <a class="link-button" href="{{ url_for('admin.project_detail', project_id=project['id']) }}">Edit</a>
       <form method="post" action="{{ url_for('admin.delete_project', project_id=project['id']) }}" onsubmit="return confirm('Delete this project and all its documents?');">
         <button type="submit" class="delete-button" aria-label="Delete">&times;</button>
       </form>
