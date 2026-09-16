@@ -29,4 +29,3 @@ flowchart LR
   disk, pasted Drive links are stored as a URL and redirected to on open.
 - All state — the SQLite file and the `uploads/` folder — lives on the
   instance's EBS volume.
-# C41_ProjectHub
