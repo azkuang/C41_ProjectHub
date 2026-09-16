@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}C41 Document Hub{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="shell">
+    {% if session.get('authenticated') %}
+    <header class="masthead">
+      <span class="brand">C41 Document Hub</span>
+      <form method="post" action="{{ url_for('auth.logout') }}" class="logout-form">
+        <button type="submit" class="button-secondary">Log out</button>
+      </form>
+    </header>
+    {% endif %}
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-list">
+          {% for message in messages %}
+            <div class="flash">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <main id="main">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+      <span class="footer-project">C41 Document Hub</span>
+    </footer>
+  </div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

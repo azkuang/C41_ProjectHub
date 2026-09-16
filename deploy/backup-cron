@@ -1,0 +1,4 @@
+# /etc/cron.d/c41hub-backup
+# Daily SQLite backup with 14-day rotation. Install with:
+#   sudo cp deploy/backup-cron /etc/cron.d/c41hub-backup
+0 3 * * * ubuntu mkdir -p /opt/c41hub/backups && cp /opt/c41hub/app.db /opt/c41hub/backups/app-$(date +\%Y\%m\%d).db && find /opt/c41hub/backups -mtime +14 -delete

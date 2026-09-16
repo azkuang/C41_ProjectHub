@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Log in — C41 Document Hub{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <p class="eyebrow">C41 Document Hub</p>
+  <h1>Sign in<span>.</span></h1>
+  <form method="post" class="login-form">
+    <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" autofocus required>
+    <button type="submit">Log in</button>
+  </form>
+</div>
+{% endblock %}
