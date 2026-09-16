@@ -18,11 +18,17 @@ def app():
     tmp_dir = tempfile.mkdtemp()
     db_path = os.path.join(tmp_dir, "test.db")
     upload_dir = os.path.join(tmp_dir, "uploads")
+    static_dir = os.path.join(tmp_dir, "static")
+    os.makedirs(static_dir, exist_ok=True)
     os.environ["DATABASE_PATH"] = db_path
     os.environ["UPLOAD_FOLDER"] = upload_dir
 
     flask_app = create_app()
     flask_app.config.update(TESTING=True)
+    # Logos are saved under static_folder (admin.py:_save_logo), which isn't
+    # controlled by an env var like DATABASE_PATH/UPLOAD_FOLDER are — point it
+    # at a scratch dir so tests never touch the real repo's static/logos/.
+    flask_app.static_folder = static_dir
 
     yield flask_app
 
@@ -36,7 +42,11 @@ def login(client):
     return client.post("/login", data={"password": "testpass"}, follow_redirects=True)
 
 
-def create_project(client, title="Zegna SS27", eyebrow="ZEGNA SS27"):
+def create_project(client, title="Test Project", eyebrow="TEST"):
+    # Use the redirect target (not a lookup by title) to identify the new
+    # project — titles aren't unique, and the seed data ships a real project
+    # also titled "Zegna SS27", so a title lookup can silently grab that one
+    # instead of the project this call just created.
     resp = client.post(
         "/admin/projects/new",
         data={
@@ -49,16 +59,17 @@ def create_project(client, title="Zegna SS27", eyebrow="ZEGNA SS27"):
             "coordinator_phone": "+393401458343",
             "emergency_phone": "112",
         },
-        follow_redirects=True,
+        follow_redirects=False,
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 302
+    project_id = int(resp.headers["Location"].rstrip("/").rsplit("/", 1)[-1])
     with client.application.app_context():
         from db import get_db
 
         row = get_db().execute(
-            "SELECT id, slug FROM projects WHERE title = ?", (title,)
+            "SELECT slug FROM projects WHERE id = ?", (project_id,)
         ).fetchone()
-    return row["id"], row["slug"]
+    return project_id, row["slug"]
 
 
 def test_landing_is_public(client):
@@ -88,11 +99,11 @@ def test_create_project_and_public_hub(client):
     project_id, slug = create_project(client)
 
     landing_resp = client.get("/")
-    assert b"Zegna SS27" in landing_resp.data
+    assert b"Test Project" in landing_resp.data
 
     hub_resp = client.get(f"/p/{slug}")
     assert hub_resp.status_code == 200
-    assert b"ZEGNA SS27" in hub_resp.data
+    assert b"TEST" in hub_resp.data
     assert b"Sign in" not in hub_resp.data
 
 

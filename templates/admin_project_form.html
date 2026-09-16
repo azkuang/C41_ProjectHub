@@ -46,5 +46,6 @@
   {% endif %}
 
   <button type="submit">{{ 'Save changes' if mode == 'edit' else 'Create project' }}</button>
+  <a class="link-button" href="{{ url_for('admin.project_detail', project_id=project_id) if mode == 'edit' else url_for('admin.dashboard') }}">Cancel</a>
 </form>
 {% endblock %}
