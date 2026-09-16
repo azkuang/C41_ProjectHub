@@ -28,12 +28,6 @@ flowchart LR
     Public -.->|redirect for\nDrive-linked docs| Drive[Google Drive]
 ```
 
-- `Auth` gates every route with one shared password (no per-user accounts).
-- `Docs` handles both storage paths: uploaded PDFs are saved to local
-  disk, pasted Drive links are stored as a URL and redirected to on open.
-- All state — the SQLite file and the `uploads/` folder — lives on the
-  instance's EBS volume.
-=======
 - **Public** (no login): the project list at `/` and each hub page at `/p/<slug>`.
 - **Admin** (shared password): create/edit projects, add credits, upload PDFs
   or paste Drive links.
