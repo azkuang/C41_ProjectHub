@@ -44,6 +44,29 @@
 })();
 
 (function () {
+  document.querySelectorAll(".item-edit-button").forEach((editButton) => {
+    const form = document.getElementById(editButton.getAttribute("aria-controls"));
+    const item = editButton.closest(".reorder-item");
+    if (!form || !item) return;
+
+    function setOpen(open) {
+      form.hidden = !open;
+      editButton.setAttribute("aria-expanded", String(open));
+      item.draggable = !open;
+      if (open) form.querySelector("input")?.focus();
+    }
+
+    editButton.addEventListener("click", () => {
+      setOpen(editButton.getAttribute("aria-expanded") !== "true");
+    });
+    form.querySelector(".item-edit-cancel")?.addEventListener("click", () => {
+      setOpen(false);
+      editButton.focus();
+    });
+  });
+})();
+
+(function () {
   document.querySelectorAll("[data-reorder-url]").forEach((container) => {
     let draggedEl = null;
 

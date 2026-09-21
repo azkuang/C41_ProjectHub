@@ -125,6 +125,34 @@ def test_add_credit_appears_on_hub(client):
     assert b"creative director" in resp.data
 
 
+def test_edit_credit_updates_project_page(client):
+    login(client)
+    project_id, slug = create_project(client)
+    client.post(
+        f"/admin/projects/{project_id}/credits",
+        data={"role": "director", "name": "Original Name"},
+    )
+    with client.application.app_context():
+        from db import get_db
+
+        credit_id = get_db().execute(
+            "SELECT id FROM credits WHERE project_id = ?", (project_id,)
+        ).fetchone()["id"]
+
+    resp = client.post(
+        f"/admin/credits/{credit_id}/edit",
+        data={"role": "photographer", "name": "Updated Name"},
+        follow_redirects=True,
+    )
+    assert b"Credit updated." in resp.data
+    assert b'value="Updated Name"' in resp.data
+
+    hub_resp = client.get(f"/p/{slug}")
+    assert b"UPDATED NAME" in hub_resp.data
+    assert b"photographer" in hub_resp.data
+    assert b"Original Name" not in hub_resp.data
+
+
 def test_upload_document_round_trip(client):
     login(client)
     project_id, slug = create_project(client)
@@ -212,6 +240,118 @@ def test_add_link_round_trip(client):
     assert b"Shotlist" in resp.data
     hub_resp = client.get(f"/p/{slug}")
     assert b"Shotlist" in hub_resp.data
+
+
+def test_edit_document_link_updates_all_sections(client):
+    login(client)
+    project_id, slug = create_project(client)
+    items = (
+        ("document", {"subtitle": "Old subtitle"}),
+        ("callsheet", {"entry_date": "2026-09-17", "location": "Old location"}),
+        ("menu", {"entry_date": "2026-09-17"}),
+    )
+    for section, extra in items:
+        client.post(
+            f"/admin/projects/{project_id}/documents/{section}/link",
+            data={
+                "title": f"Old {section}",
+                "uploader_name": "Alex",
+                "drive_url": "https://example.com/old",
+                **extra,
+            },
+        )
+
+    with client.application.app_context():
+        from db import get_db
+
+        rows = get_db().execute(
+            "SELECT id, section FROM documents WHERE project_id = ?", (project_id,)
+        ).fetchall()
+    ids = {row["section"]: row["id"] for row in rows}
+
+    updates = (
+        ("document", {"subtitle": "New subtitle"}),
+        ("callsheet", {"entry_date": "2026-09-18", "location": "New location"}),
+        ("menu", {"entry_date": "2026-09-19"}),
+    )
+    for section, extra in updates:
+        resp = client.post(
+            f"/admin/documents/{ids[section]}/edit",
+            data={
+                "title": f"New {section}",
+                "uploader_name": "Sam",
+                "drive_url": "https://example.com/new",
+                **extra,
+            },
+            follow_redirects=True,
+        )
+        assert b"Item updated." in resp.data
+
+    with client.application.app_context():
+        from db import get_db
+
+        rows = get_db().execute(
+            "SELECT * FROM documents WHERE project_id = ? ORDER BY section", (project_id,)
+        ).fetchall()
+    assert all(row["title"].startswith("New ") for row in rows)
+    assert all(row["drive_url"] == "https://example.com/new" for row in rows)
+    assert all(row["uploader_name"] == "Sam" for row in rows)
+
+    hub_resp = client.get(f"/p/{slug}")
+    assert b"New document" in hub_resp.data
+    assert b"New location" in hub_resp.data
+    assert b"19 SEP" in hub_resp.data
+
+
+def test_edit_uploaded_document_can_replace_pdf(client):
+    login(client)
+    project_id, _ = create_project(client)
+    client.post(
+        f"/admin/projects/{project_id}/documents/document/upload",
+        data={
+            "title": "Original PDF",
+            "uploader_name": "Alex",
+            "file": (io.BytesIO(b"%PDF-1.4 original"), "original.pdf"),
+        },
+        content_type="multipart/form-data",
+    )
+    with client.application.app_context():
+        from db import get_db
+
+        doc = get_db().execute(
+            "SELECT id, filename FROM documents WHERE project_id = ?", (project_id,)
+        ).fetchone()
+    old_path = os.path.join(
+        client.application.config["UPLOAD_FOLDER"], str(project_id), doc["filename"]
+    )
+
+    client.post(
+        f"/admin/documents/{doc['id']}/edit",
+        data={
+            "title": "Replacement PDF",
+            "subtitle": "Updated",
+            "uploader_name": "Sam",
+            "file": (io.BytesIO(b"%PDF-1.4 replacement"), "replacement.pdf"),
+        },
+        content_type="multipart/form-data",
+    )
+
+    with client.application.app_context():
+        from db import get_db
+
+        updated = get_db().execute(
+            "SELECT * FROM documents WHERE id = ?", (doc["id"],)
+        ).fetchone()
+    new_path = os.path.join(
+        client.application.config["UPLOAD_FOLDER"], str(project_id), updated["filename"]
+    )
+    assert updated["title"] == "Replacement PDF"
+    assert updated["subtitle"] == "Updated"
+    assert updated["uploader_name"] == "Sam"
+    assert updated["filename"] != doc["filename"]
+    assert not os.path.exists(old_path)
+    with open(new_path, "rb") as uploaded_file:
+        assert uploaded_file.read() == b"%PDF-1.4 replacement"
 
 
 def test_callsheet_requires_date_and_location(client):
