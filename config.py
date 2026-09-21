@@ -7,7 +7,8 @@ load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MAX_CONTENT_LENGTH = 25 * 1024 * 1024  # 25MB
-PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 30  # 30 days
+PERMANENT_SESSION_LIFETIME = 60 * 60 * 24  # 24 hours
+SESSION_REFRESH_EACH_REQUEST = False
 
 
 def load_config():
@@ -24,4 +25,5 @@ def load_config():
         ),
         "MAX_CONTENT_LENGTH": MAX_CONTENT_LENGTH,
         "PERMANENT_SESSION_LIFETIME": PERMANENT_SESSION_LIFETIME,
+        "SESSION_REFRESH_EACH_REQUEST": SESSION_REFRESH_EACH_REQUEST,
     }

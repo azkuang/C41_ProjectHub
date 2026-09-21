@@ -269,6 +269,29 @@ def reorder_credits(project_id):
     return {"status": "ok"}
 
 
+@bp.route("/credits/<int:credit_id>/edit", methods=["POST"])
+@login_required
+def edit_credit(credit_id):
+    db = get_db()
+    credit = db.execute("SELECT * FROM credits WHERE id = ?", (credit_id,)).fetchone()
+    if credit is None:
+        return redirect(url_for("admin.dashboard"))
+
+    role = request.form.get("role", "").strip()
+    name = request.form.get("name", "").strip()
+    if not role or not name:
+        flash("Role and name are required.")
+        return redirect(url_for("admin.project_detail", project_id=credit["project_id"]))
+
+    db.execute(
+        "UPDATE credits SET role = ?, name = ? WHERE id = ?",
+        (role, name, credit_id),
+    )
+    db.commit()
+    flash("Credit updated.")
+    return redirect(url_for("admin.project_detail", project_id=credit["project_id"]))
+
+
 @bp.route("/credits/<int:credit_id>/delete", methods=["POST"])
 @login_required
 def delete_credit(credit_id):
@@ -433,6 +456,93 @@ def reorder_documents(project_id, section):
         )
     db.commit()
     return {"status": "ok"}
+
+
+@bp.route("/documents/<int:doc_id>/edit", methods=["POST"])
+@login_required
+def edit_document(doc_id):
+    db = get_db()
+    doc = db.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
+    if doc is None:
+        return redirect(url_for("admin.dashboard"))
+
+    title = request.form.get("title", "").strip()
+    uploader_name = request.form.get("uploader_name", "").strip()
+    extra, error = _section_extra_fields(doc["section"])
+    project_url = url_for("admin.project_detail", project_id=doc["project_id"])
+
+    if not title or not uploader_name:
+        flash("Title and your name are required.")
+        return redirect(project_url)
+    if error:
+        flash(error)
+        return redirect(project_url)
+
+    drive_url = doc["drive_url"]
+    if doc["source_type"] == "drive":
+        drive_url = request.form.get("drive_url", "").strip()
+        if not drive_url:
+            flash("A link is required.")
+            return redirect(project_url)
+        if not drive_url.lower().startswith(("http://", "https://")):
+            flash("That doesn't look like a valid URL.")
+            return redirect(project_url)
+
+    filename = doc["filename"]
+    replacement = request.files.get("file")
+    if replacement and replacement.filename:
+        if doc["source_type"] != "upload":
+            abort(400)
+        if not replacement.filename.lower().endswith(".pdf"):
+            flash("Only PDF files are allowed.")
+            return redirect(project_url)
+        header = replacement.stream.read(len(PDF_MAGIC))
+        replacement.stream.seek(0)
+        if header != PDF_MAGIC:
+            flash("That file doesn't look like a valid PDF.")
+            return redirect(project_url)
+
+        original_name = secure_filename(replacement.filename)
+        filename = (
+            f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}-"
+            f"{secrets.token_hex(4)}-{original_name}"
+        )
+        upload_dir = os.path.join(
+            current_app.config["UPLOAD_FOLDER"], str(doc["project_id"])
+        )
+        os.makedirs(upload_dir, exist_ok=True)
+        replacement.save(os.path.join(upload_dir, filename))
+
+    db.execute(
+        "UPDATE documents SET title = ?, subtitle = ?, drive_url = ?, filename = ?, "
+        "entry_date = ?, location = ?, uploader_name = ? WHERE id = ?",
+        (
+            title,
+            extra["subtitle"],
+            drive_url,
+            filename,
+            extra["entry_date"],
+            extra["location"],
+            uploader_name,
+            doc_id,
+        ),
+    )
+    db.commit()
+
+    if filename != doc["filename"] and doc["filename"]:
+        try:
+            os.remove(
+                os.path.join(
+                    current_app.config["UPLOAD_FOLDER"],
+                    str(doc["project_id"]),
+                    doc["filename"],
+                )
+            )
+        except OSError:
+            pass
+
+    flash("Item updated.")
+    return redirect(project_url)
 
 
 @bp.route("/documents/<int:doc_id>/delete", methods=["POST"])

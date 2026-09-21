@@ -61,8 +61,19 @@
         <strong>{{ credit['name'] }}</strong>
         <span>{{ credit['role'] }}</span>
       </span>
+      <button type="button" class="item-edit-button" aria-expanded="false" aria-controls="credit-edit-{{ credit['id'] }}">Edit</button>
       <form method="post" action="{{ url_for('admin.delete_credit', credit_id=credit['id']) }}" onsubmit="return confirm('Remove this credit?');">
         <button type="submit" class="delete-button" aria-label="Remove">&times;</button>
+      </form>
+      <form method="post" action="{{ url_for('admin.edit_credit', credit_id=credit['id']) }}" id="credit-edit-{{ credit['id'] }}" class="card inline-edit" hidden>
+        <label for="credit-role-{{ credit['id'] }}">Role</label>
+        <input type="text" id="credit-role-{{ credit['id'] }}" name="role" value="{{ credit['role'] }}" required>
+        <label for="credit-name-{{ credit['id'] }}">Name</label>
+        <input type="text" id="credit-name-{{ credit['id'] }}" name="name" value="{{ credit['name'] }}" required>
+        <div class="inline-edit-actions">
+          <button type="submit">Save changes</button>
+          <button type="button" class="button-secondary item-edit-cancel">Cancel</button>
+        </div>
       </form>
     </div>
     {% else %}
@@ -94,8 +105,38 @@
           {%- if doc['location'] %} &middot; {{ doc['location'] }}{% endif %}
         </span>
       </span>
+      <button type="button" class="item-edit-button" aria-expanded="false" aria-controls="document-edit-{{ doc['id'] }}">Edit</button>
       <form method="post" action="{{ url_for('admin.delete_document', doc_id=doc['id']) }}" onsubmit="return confirm('Delete this entry?');">
         <button type="submit" class="delete-button" aria-label="Delete">&times;</button>
+      </form>
+      <form method="post" action="{{ url_for('admin.edit_document', doc_id=doc['id']) }}" id="document-edit-{{ doc['id'] }}" class="card inline-edit" enctype="multipart/form-data" hidden>
+        {% if doc['source_type'] == 'drive' %}
+        <label for="document-url-{{ doc['id'] }}">URL</label>
+        <input type="url" id="document-url-{{ doc['id'] }}" name="drive_url" value="{{ doc['drive_url'] }}" required>
+        {% else %}
+        <label for="document-file-{{ doc['id'] }}">Replace PDF (optional)</label>
+        <input type="file" id="document-file-{{ doc['id'] }}" name="file" accept="application/pdf">
+        {% endif %}
+        <label for="document-title-{{ doc['id'] }}">Title</label>
+        <input type="text" id="document-title-{{ doc['id'] }}" name="title" value="{{ doc['title'] }}" required>
+        {% if section == 'callsheet' %}
+        <label for="document-date-{{ doc['id'] }}">Date</label>
+        <input type="date" id="document-date-{{ doc['id'] }}" name="entry_date" value="{{ doc['entry_date'] or '' }}" required>
+        <label for="document-location-{{ doc['id'] }}">Location</label>
+        <input type="text" id="document-location-{{ doc['id'] }}" name="location" value="{{ doc['location'] or '' }}" required>
+        {% elif section == 'menu' %}
+        <label for="document-date-{{ doc['id'] }}">Date</label>
+        <input type="date" id="document-date-{{ doc['id'] }}" name="entry_date" value="{{ doc['entry_date'] or '' }}" required>
+        {% elif section == 'document' %}
+        <label for="document-subtitle-{{ doc['id'] }}">Subtitle (optional)</label>
+        <input type="text" id="document-subtitle-{{ doc['id'] }}" name="subtitle" value="{{ doc['subtitle'] or '' }}">
+        {% endif %}
+        <label for="document-uploader-{{ doc['id'] }}">Your name</label>
+        <input type="text" id="document-uploader-{{ doc['id'] }}" name="uploader_name" value="{{ doc['uploader_name'] }}" required>
+        <div class="inline-edit-actions">
+          <button type="submit">Save changes</button>
+          <button type="button" class="button-secondary item-edit-cancel">Cancel</button>
+        </div>
       </form>
     </div>
     {% else %}
