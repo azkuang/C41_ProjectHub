@@ -245,13 +245,19 @@ def add_credit(project_id):
         "SELECT COALESCE(MAX(sort_order), -1) + 1 AS n FROM credits WHERE project_id = ?",
         (project_id,),
     ).fetchone()["n"]
-    db.execute(
+    cursor = db.execute(
         "INSERT INTO credits (project_id, role, name, sort_order) VALUES (?, ?, ?, ?)",
         (project_id, role, name, next_order),
     )
     db.commit()
     flash("Credit added.")
-    return redirect(url_for("admin.project_detail", project_id=project_id))
+    return redirect(
+        url_for(
+            "admin.project_detail",
+            project_id=project_id,
+            _anchor=f"credit-{cursor.lastrowid}",
+        )
+    )
 
 
 @bp.route("/projects/<int:project_id>/credits/reorder", methods=["POST"])
@@ -372,7 +378,7 @@ def upload_document(project_id, section):
 
     db = get_db()
     sort_order = _next_doc_sort_order(db, project_id, section)
-    db.execute(
+    cursor = db.execute(
         "INSERT INTO documents "
         "(project_id, section, title, subtitle, source_type, filename, entry_date, "
         " location, uploader_name, sort_order) "
@@ -391,7 +397,13 @@ def upload_document(project_id, section):
     )
     db.commit()
     flash("PDF uploaded.")
-    return redirect(url_for("admin.project_detail", project_id=project_id))
+    return redirect(
+        url_for(
+            "admin.project_detail",
+            project_id=project_id,
+            _anchor=f"document-{cursor.lastrowid}",
+        )
+    )
 
 
 @bp.route(
@@ -418,7 +430,7 @@ def add_document_link(project_id, section):
 
     db = get_db()
     sort_order = _next_doc_sort_order(db, project_id, section)
-    db.execute(
+    cursor = db.execute(
         "INSERT INTO documents "
         "(project_id, section, title, subtitle, source_type, drive_url, entry_date, "
         " location, uploader_name, sort_order) "
@@ -437,7 +449,13 @@ def add_document_link(project_id, section):
     )
     db.commit()
     flash("Link added.")
-    return redirect(url_for("admin.project_detail", project_id=project_id))
+    return redirect(
+        url_for(
+            "admin.project_detail",
+            project_id=project_id,
+            _anchor=f"document-{cursor.lastrowid}",
+        )
+    )
 
 
 @bp.route(
