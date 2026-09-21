@@ -51,7 +51,7 @@
   </form>
 </section>
 
-<section>
+<section id="credits-section">
   <p class="card-label">Credits</p>
   <div class="documents" data-reorder-url="{{ url_for('admin.reorder_credits', project_id=project['id']) }}">
     {% for credit in credits %}
@@ -90,7 +90,7 @@
 </section>
 
 {% for section, label in [('document', 'Documents & Links'), ('callsheet', 'Callsheets'), ('menu', 'Catering Menus')] %}
-<section>
+<section id="{{ section }}-section">
   <p class="card-label">{{ label }}</p>
   <div class="documents" data-reorder-url="{{ url_for('admin.reorder_documents', project_id=project['id'], section=section) }}">
     {% for doc in documents_by_section[section] %}

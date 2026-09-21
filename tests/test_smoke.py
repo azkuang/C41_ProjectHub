@@ -196,6 +196,68 @@ def test_edit_credit_updates_project_page(client):
     assert b"Original Name" not in hub_resp.data
 
 
+def test_edit_and_delete_items_redirect_within_their_sections(client):
+    login(client)
+    project_id, _ = create_project(client)
+    client.post(
+        f"/admin/projects/{project_id}/credits",
+        data={"role": "director", "name": "Original Name"},
+    )
+    client.post(
+        f"/admin/projects/{project_id}/documents/menu/link",
+        data={
+            "title": "Lunch",
+            "uploader_name": "Alex",
+            "drive_url": "https://example.com/lunch",
+            "entry_date": "2026-09-17",
+        },
+    )
+    with client.application.app_context():
+        from db import get_db
+
+        credit_id = get_db().execute(
+            "SELECT id FROM credits WHERE project_id = ?", (project_id,)
+        ).fetchone()["id"]
+        doc_id = get_db().execute(
+            "SELECT id FROM documents WHERE project_id = ?", (project_id,)
+        ).fetchone()["id"]
+
+    credit_edit = client.post(
+        f"/admin/credits/{credit_id}/edit",
+        data={"role": "photographer", "name": "Updated Name"},
+    )
+    assert credit_edit.headers["Location"] == (
+        f"/admin/projects/{project_id}#credit-{credit_id}"
+    )
+
+    document_edit = client.post(
+        f"/admin/documents/{doc_id}/edit",
+        data={
+            "title": "Dinner",
+            "uploader_name": "Sam",
+            "drive_url": "https://example.com/dinner",
+            "entry_date": "2026-09-18",
+        },
+    )
+    assert document_edit.headers["Location"] == (
+        f"/admin/projects/{project_id}#document-{doc_id}"
+    )
+
+    credit_delete = client.post(f"/admin/credits/{credit_id}/delete")
+    assert credit_delete.headers["Location"] == (
+        f"/admin/projects/{project_id}#credits-section"
+    )
+
+    document_delete = client.post(f"/admin/documents/{doc_id}/delete")
+    assert document_delete.headers["Location"] == (
+        f"/admin/projects/{project_id}#menu-section"
+    )
+
+    detail_resp = client.get(document_delete.headers["Location"])
+    assert b'id="credits-section"' in detail_resp.data
+    assert b'id="menu-section"' in detail_resp.data
+
+
 def test_upload_document_round_trip(client):
     login(client)
     project_id, slug = create_project(client)

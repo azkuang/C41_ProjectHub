@@ -287,7 +287,13 @@ def edit_credit(credit_id):
     name = request.form.get("name", "").strip()
     if not role or not name:
         flash("Role and name are required.")
-        return redirect(url_for("admin.project_detail", project_id=credit["project_id"]))
+        return redirect(
+            url_for(
+                "admin.project_detail",
+                project_id=credit["project_id"],
+                _anchor=f"credit-{credit_id}",
+            )
+        )
 
     db.execute(
         "UPDATE credits SET role = ?, name = ? WHERE id = ?",
@@ -295,7 +301,13 @@ def edit_credit(credit_id):
     )
     db.commit()
     flash("Credit updated.")
-    return redirect(url_for("admin.project_detail", project_id=credit["project_id"]))
+    return redirect(
+        url_for(
+            "admin.project_detail",
+            project_id=credit["project_id"],
+            _anchor=f"credit-{credit_id}",
+        )
+    )
 
 
 @bp.route("/credits/<int:credit_id>/delete", methods=["POST"])
@@ -307,7 +319,13 @@ def delete_credit(credit_id):
         db.execute("DELETE FROM credits WHERE id = ?", (credit_id,))
         db.commit()
         flash("Credit removed.")
-        return redirect(url_for("admin.project_detail", project_id=credit["project_id"]))
+        return redirect(
+            url_for(
+                "admin.project_detail",
+                project_id=credit["project_id"],
+                _anchor="credits-section",
+            )
+        )
     return redirect(url_for("admin.dashboard"))
 
 
@@ -487,7 +505,11 @@ def edit_document(doc_id):
     title = request.form.get("title", "").strip()
     uploader_name = request.form.get("uploader_name", "").strip()
     extra, error = _section_extra_fields(doc["section"])
-    project_url = url_for("admin.project_detail", project_id=doc["project_id"])
+    project_url = url_for(
+        "admin.project_detail",
+        project_id=doc["project_id"],
+        _anchor=f"document-{doc_id}",
+    )
 
     if not title or not uploader_name:
         flash("Title and your name are required.")
@@ -580,5 +602,11 @@ def delete_document(doc_id):
         db.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
         db.commit()
         flash("Deleted.")
-        return redirect(url_for("admin.project_detail", project_id=doc["project_id"]))
+        return redirect(
+            url_for(
+                "admin.project_detail",
+                project_id=doc["project_id"],
+                _anchor=f"{doc['section']}-section",
+            )
+        )
     return redirect(url_for("admin.dashboard"))
