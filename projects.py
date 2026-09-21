@@ -1,7 +1,16 @@
 import os
 from datetime import datetime
 
-from flask import Blueprint, abort, current_app, redirect, render_template, send_from_directory
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    redirect,
+    render_template,
+    send_from_directory,
+    session,
+    url_for,
+)
 
 from db import get_db
 
@@ -37,6 +46,9 @@ def _augment_menu(doc):
 
 @bp.route("/")
 def landing():
+    if session.get("authenticated"):
+        return redirect(url_for("admin.dashboard"))
+
     db = get_db()
     projects = db.execute(
         "SELECT * FROM projects ORDER BY created_at DESC, id DESC"

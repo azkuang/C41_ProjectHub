@@ -2,6 +2,7 @@ import io
 import os
 import sys
 import tempfile
+from datetime import timedelta
 
 import pytest
 
@@ -78,6 +79,18 @@ def test_landing_is_public(client):
     assert b"Sign in" not in resp.data
 
 
+def test_authenticated_landing_redirects_to_admin(client):
+    login(client)
+    resp = client.get("/", follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/admin/"
+
+
+def test_login_session_expires_24_hours_after_login(app):
+    assert app.permanent_session_lifetime == timedelta(hours=24)
+    assert app.config["SESSION_REFRESH_EACH_REQUEST"] is False
+
+
 def test_admin_requires_login(client):
     resp = client.get("/admin/", follow_redirects=True)
     assert b"Sign in" in resp.data
@@ -97,6 +110,7 @@ def test_login_failure(client):
 def test_create_project_and_public_hub(client):
     login(client)
     project_id, slug = create_project(client)
+    client.post("/logout")
 
     landing_resp = client.get("/")
     assert b"Test Project" in landing_resp.data
