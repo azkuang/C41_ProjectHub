@@ -139,6 +139,35 @@ def test_add_credit_appears_on_hub(client):
     assert b"creative director" in resp.data
 
 
+def test_new_items_redirect_to_the_created_item(client):
+    login(client)
+    project_id, _ = create_project(client)
+
+    credit_resp = client.post(
+        f"/admin/projects/{project_id}/credits",
+        data={"role": "producer", "name": "Alex"},
+    )
+    credit_location, credit_anchor = credit_resp.headers["Location"].rsplit("#", 1)
+    assert credit_location == f"/admin/projects/{project_id}"
+    assert credit_anchor.startswith("credit-")
+
+    link_resp = client.post(
+        f"/admin/projects/{project_id}/documents/document/link",
+        data={
+            "title": "Shotlist",
+            "uploader_name": "Alex",
+            "drive_url": "https://example.com/shotlist",
+        },
+    )
+    link_location, document_anchor = link_resp.headers["Location"].rsplit("#", 1)
+    assert link_location == f"/admin/projects/{project_id}"
+    assert document_anchor.startswith("document-")
+
+    detail_resp = client.get(link_resp.headers["Location"])
+    assert f'id="{credit_anchor}"'.encode() in detail_resp.data
+    assert f'id="{document_anchor}"'.encode() in detail_resp.data
+
+
 def test_edit_credit_updates_project_page(client):
     login(client)
     project_id, slug = create_project(client)

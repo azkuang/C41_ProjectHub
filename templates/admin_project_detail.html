@@ -55,7 +55,7 @@
   <p class="card-label">Credits</p>
   <div class="documents" data-reorder-url="{{ url_for('admin.reorder_credits', project_id=project['id']) }}">
     {% for credit in credits %}
-    <div class="wide-link reorder-item" draggable="true" data-id="{{ credit['id'] }}">
+    <div class="wide-link reorder-item" id="credit-{{ credit['id'] }}" draggable="true" data-id="{{ credit['id'] }}">
       <span class="drag-handle" aria-hidden="true">⠿</span>
       <span class="link-content">
         <strong>{{ credit['name'] }}</strong>
@@ -94,7 +94,7 @@
   <p class="card-label">{{ label }}</p>
   <div class="documents" data-reorder-url="{{ url_for('admin.reorder_documents', project_id=project['id'], section=section) }}">
     {% for doc in documents_by_section[section] %}
-    <div class="wide-link document-link reorder-item" draggable="true" data-id="{{ doc['id'] }}">
+    <div class="wide-link document-link reorder-item" id="document-{{ doc['id'] }}" draggable="true" data-id="{{ doc['id'] }}">
       <span class="drag-handle" aria-hidden="true">⠿</span>
       <span class="link-content">
         <strong>{{ doc['title'] }}</strong>
